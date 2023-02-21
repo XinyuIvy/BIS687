@@ -1,0 +1,65 @@
+---
+title: "BIS687 Project"
+author: "Xinyu Zhang"
+date: '2023-02-15'
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(naniar)
+```
+
+# Data Preprocessing
+
+```{r}
+data2 <- read.csv("C:/Users/Ivy/OneDrive/Desktop/Ivy's Documents/Courses/Spring 2023/BIS 687/sickle-cell/data/CSV/curesc_year2_v2.csv")
+
+# Patient-related:
+#"FLAG_LANCET","FLAG_BLOOD","ETHNICIT"
+patient2 <- data2[,c("DUMMYID","COUNTRY","AGE","AGEGPFF","SEX","RACEG","KPS","HCTCIGPF")]
+
+# Disease-related:
+disease2 <- data2$SUBDIS1F
+
+# Tranplant-related:
+# "TXNUM","TXTYPE","CONDGRPF","CONDGRP_FINAL","GVHD_FINAL","YEARGPF"
+transplant2 <- data2[,c("DONORF","GRAFTYPE","ATGF","HLA_FINAL","RCMVPR","YEARTX")]
+
+# Outcomes
+
+outcome2 <- data2[,c("DEAD","INTXSURV","EFS","GF","DWOGF","INTXGF","ANC","DWOANC","INTXANC","PLATELET",
+                     "DWOPLATELET","INTXPLATELET","AGVHD","DWOAGVHD","INTXAGVHD","CGVHD",
+                     "DWOCGVHD","INTXCGVHD","SCDMAL_FINAL","INTXSCDMAL")]
+
+# CRF data collection track only
+# missing rate < 0.5
+other50 <- data2[,c("STROKEHI","ACSPSHI","VOCPSHI")]
+
+
+temp_other <- data2 %>% select(-c("DUMMYID","FLAG_LANCET","FLAG_BLOOD","COUNTRY","AGE","AGEGPFF","SEX",
+                     "ETHNICIT","RACEG","KPS","HCTCIGPF","SUBDIS1F","DEAD","INTXSURV","EFS","GF","DWOGF",
+                     "INTXGF","ANC","DWOANC","INTXANC","PLATELET","DWOPLATELET","INTXPLATELET",
+                     "AGVHD","DWOAGVHD","INTXAGVHD","CGVHD","DWOCGVHD","INTXCGVHD","SCDMAL_FINAL",
+                     "INTXSCDMAL","TXNUM","TXTYPE","DONORF","GRAFTYPE","CONDGRPF","CONDGRP_FINAL","ATGF",
+                        "GVHD_FINAL","HLA_FINAL","RCMVPR","YEARGPF","YEARTX"))
+miss2 <- temp_other %>% miss_var_summary() %>% as.data.frame()
+var_other2 <- miss2[miss2$pct_miss<60,]$variable
+other2 <- temp_other[,var_other2]
+data2_all <- cbind(patient2,SUBDIS1F=disease2,transplant2,outcome2,other2)
+```
+
+
+```{r}
+library("survival")
+library("survminer")
+fit<- survfit(Surv(INTXANC, ANC) ~ 1, data = data2_all)
+
+ggsurvplot(fit, data = data2_all)
+ggsave("single-group KM curves for ANC.pdf", width=9, height=6)
+```
+
